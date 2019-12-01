@@ -1,3 +1,6 @@
+import os
+
+
 def calculate_fuel(mass):
     total_fuel_mass = 0
 
@@ -11,7 +14,7 @@ def calculate_fuel(mass):
 
 if __name__ == '__main__':
     result = 0
-    with open('day_1_input.txt', 'r') as f:
+    with open(os.path.join('..', 'day_1_input.txt'), 'r') as f:
         for line in f:
             result += calculate_fuel(int(line))
 
