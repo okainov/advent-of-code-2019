@@ -1,16 +1,22 @@
-import os
+import re
 
 
 def is_good_pass(password):
-    password = str(password)
+    password = 'Q' + str(password) + 'Q'
 
-    double_digit = False
-    for i in range(len(password) - 1):
+    double_digit = set()
+    for i in range(1, len(password) - 2):
         if password[i] == password[i + 1]:
-            double_digit = True
+            double_digit.add(password[i])
         if password[i] > password[i + 1]:
             return False
-    return double_digit
+
+    is_double_really_double = False
+    for digit in double_digit:
+        pattern = '[^%s]%s{2}[^%s]' % (digit, digit, digit)
+        if re.findall(pattern, password):
+            is_double_really_double = True
+    return bool(double_digit) and is_double_really_double
 
 
 if __name__ == '__main__':
@@ -21,5 +27,5 @@ if __name__ == '__main__':
 
     print(result)
 
-    # First part answer:  1431
-    # Second part answer: 48012
+    # First part answer:  921
+    # Second part answer: 603
