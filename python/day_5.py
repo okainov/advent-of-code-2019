@@ -1,42 +1,82 @@
 import os
 
 
-def solve_day_2(data, first=12, second=2):
+def get_param(data, index, mode):
+    if mode == '0':
+        return data[index]
+    elif mode == '1':
+        return index
+    pass
+
+
+def solve_day_5(data, input_value=1):
     # Make explicit copy to do not mess with initial data
     data = data[::]
 
-    data[1] = first
-    data[2] = second
-
     i = 0
-    while i < len((data)):
-        if data[i] == 99:
+    while True:
+        full_operation = f"{data[i]:05d}"
+
+        operation = int(full_operation[-2:])
+        params = full_operation[:-2]
+
+        if operation == 99:
             break
-        elif data[i] in [1, 2]:
-            first_pos = data[i + 1]
-            second_pos = data[i + 2]
+
+        if operation == 1:
             result_pos = data[i + 3]
-            if data[i] == 1:
-                data[result_pos] = data[first_pos] + data[second_pos]
-            elif data[i] == 2:
-                data[result_pos] = data[first_pos] * data[second_pos]
+            data[result_pos] = data[get_param(data, i + 1, params[-1])] + data[get_param(data, i + 2, params[-2])]
             i += 4
-            continue
-        i += 1
-    return data[0]
+        elif operation == 2:
+            # Multiply
+            result_pos = data[i + 3]
+            data[result_pos] = data[get_param(data, i + 1, params[-1])] * data[get_param(data, i + 2, params[-2])]
+            i += 4
+        elif operation == 3:
+            # Input
+            result_pos = data[i + 1]
+            data[result_pos] = input_value
+            i += 2
+        elif operation == 4:
+            # Print
+            print(data[get_param(data, i + 1, params[-1])])
+            i += 2
+        elif operation == 5:
+            if data[get_param(data, i + 1, params[-1])]:
+                i = data[get_param(data, i + 2, params[-2])]
+            else:
+                i += 3
+        elif operation == 6:
+            if data[get_param(data, i + 1, params[-1])] == 0:
+                i = data[get_param(data, i + 2, params[-2])]
+            else:
+                i += 3
+        elif operation == 7:
+            # If less than
+            if data[get_param(data, i + 1, params[-1])] < data[get_param(data, i + 2, params[-2])]:
+                data[get_param(data, i + 3, params[-3])] = 1
+            else:
+                data[get_param(data, i + 3, params[-3])] = 0
+
+            i += 4
+        elif operation == 8:
+            # if equal
+            if data[get_param(data, i + 1, params[-1])] == data[get_param(data, i + 2, params[-2])]:
+                data[get_param(data, i + 3, params[-3])] = 1
+            else:
+                data[get_param(data, i + 3, params[-3])] = 0
+            i += 4
+
+    return
 
 
 if __name__ == '__main__':
     result = 0
-    with open(os.path.join('..', 'day_2_input.txt'), 'r') as f:
+    with open(os.path.join('..', 'day_5_input.txt'), 'r') as f:
         data = list(map(int, f.read().split(',')))
 
-    print('First part answer: %s' % solve_day_2(data))
-    for i in range(100):
-        for j in range(100):
-            if solve_day_2(data, i, j) == 19690720:
-                print('Second part answer: %s' % str(100 * i + j))
-                break
+    solve_day_5(data, input_value=1)
+    solve_day_5(data, input_value=5)
 
-    # First part answer:  3790689
-    # Second part answer: 6533
+    # First part answer:  2845163
+    # Second part answer: 9436229
