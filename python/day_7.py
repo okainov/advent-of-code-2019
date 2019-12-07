@@ -10,7 +10,7 @@ def get_param(data, index, mode):
     pass
 
 
-def solve_day_7(data, input_values):
+def solve_day_7(data):
     # Make explicit copy to do not mess with initial data
     data = data[::]
 
@@ -38,13 +38,13 @@ def solve_day_7(data, input_values):
         elif operation == 3:
             # Input
             result_pos = data[i + 1]
-            data[result_pos] = input_values[inputs]
+            data[result_pos] = yield
             inputs += 1
             i += 2
         elif operation == 4:
             # Print
             output = data[get_param(data, i + 1, params[-1])]
-            print(output)
+            yield output
             i += 2
         elif operation == 5:
             if data[get_param(data, i + 1, params[-1])]:
@@ -78,9 +78,25 @@ def solve_day_7(data, input_values):
 def calculate_squence(data, inputs):
     result = 0
 
-    for i in inputs:
-        result = solve_day_7(data, input_values=[i, result])
-    return result
+    amplifiers = []
+
+    for i in range(len(inputs)):
+        amplifier = solve_day_7(data)
+        next(amplifier)
+        amplifier.send(inputs[i])
+
+        amplifiers.append(amplifier)
+
+    while True:
+        for i in range(len(inputs)):
+            result = amplifiers[i].send(result)
+            try:
+                next(amplifiers[i])
+            except StopIteration:
+                if i == len(inputs) - 1:
+                    return result
+                else:
+                    continue
 
 
 if __name__ == '__main__':
@@ -89,11 +105,18 @@ if __name__ == '__main__':
         data = list(map(int, f.read().split(',')))
 
     max_res = None
-    for seq in itertools.permutations([1, 2, 3, 4, 0]):
+    for seq in itertools.permutations([0, 1, 2, 3, 4]):
         current_res = calculate_squence(data, seq)
         if max_res is None or current_res > max_res:
             max_res = current_res
     print('Part 1: %s' % max_res)
 
+    max_res = None
+    for seq in itertools.permutations([5, 6, 7, 8, 9]):
+        current_res = calculate_squence(data, seq)
+        if max_res is None or current_res > max_res:
+            max_res = current_res
+    print('Part 2: %s' % max_res)
+
     # First part answer:  67023
-    # Second part answer: 9436229
+    # Second part answer: 7818398
