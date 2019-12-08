@@ -1,27 +1,37 @@
-import itertools
 import os
-from collections import defaultdict
 
 if __name__ == '__main__':
     result = 0
     with open(os.path.join('..', 'day_8_input.txt'), 'r') as f:
         data = f.read()
 
-    current_layer_numbers = defaultdict(int)
-    min_zeroes = None
-    min_layer = None
+    final_image = {}
 
+    WIDTH = 25
+    HEIGHT = 6
     for i, c in enumerate(data):
-        if (i+1) % (25*6) == 0:
-            if min_zeroes is None or current_layer_numbers['0'] < min_zeroes:
-                min_layer = current_layer_numbers
-                min_zeroes = current_layer_numbers['0']
-            current_layer_numbers = defaultdict(int)
-        if c not in current_layer_numbers:
-            current_layer_numbers[c] = 0
-        current_layer_numbers[c] += 1
+        i = i % (WIDTH * HEIGHT)
+        y = i // 25
+        x = i - 25 * y
 
-    print(min_layer['1'] * min_layer['2'])
+        if (x, y) in final_image:
+            # We already know the color
+            continue
+
+        if c == '2':
+            # Nothing to do with transparent
+            continue
+
+        final_image[(x, y)] = c
+
+    for y in range(HEIGHT):
+        # Print newline
+        print('')
+        for x in range(WIDTH):
+            char = chr(0x2588 + 9)
+            if final_image[(x, y)] == '1':
+                char = chr(0x2588)
+            print(char, end='')
 
     # First part answer:  2048
-    # Second part answer:
+    # Second part answer: HFYAK
