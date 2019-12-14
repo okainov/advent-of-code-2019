@@ -4,58 +4,23 @@ from copy import copy
 import math
 
 
-def dst(a, b):
-    return (a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1])
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
-
-def add_points(a, b):
-    return (a[0] + b[0], a[1] + b[1])
-
-
-def mul(a, c):
-    return (a[0] * c, a[1] * c)
-
-
 def simplify_delta(delta):
     gcd = math.gcd(delta[0], delta[1])
-    if gcd > 1:
-        return delta[0] // gcd, delta[1] // gcd
-    return delta
+    return delta[0] // gcd, delta[1] // gcd
 
 
 def calculate_visible(data, x, y):
     data = copy(data)
-    del data[(x, y)]
-    count = 0
     start_point = (x, y)
-    points = sorted(data.keys(), key=lambda p: dst(start_point, p))
-    while points:
-        p = points.pop(0)
-        x_1, y_1 = p
-        count += 1
-        # Need to simplify delta since it might not be minimal
-        delta = simplify_delta((x_1 - x, y_1 - y))
-        for i in range(1, 34):
-            if add_points(start_point, mul(delta, i)) in points:
-                points.remove(add_points(start_point, mul(delta, i)))
-        if delta[0] == 0:
-            for i in range(1, 34):
-                delt = add_points(delta, (0, i * delta[1] / abs(delta[1])))
-                if add_points(start_point, delt) in points:
-                    points.remove(add_points(start_point, delt))
-        if delta[1] == 0:
-            for i in range(1, 34):
-                delt = add_points(delta, (i * delta[0] / abs(delta[0]), 0))
-                if add_points(start_point, delt) in points:
-                    points.remove(add_points(start_point, delt))
-        if abs(delta[1]) == abs(delta[0]):
-            for i in range(1, 34):
-                delt = add_points(delta, (i * delta[0] / abs(delta[0]), i * delta[1] / abs(delta[1])))
-                if add_points(start_point, delt) in points:
-                    points.remove(add_points(start_point, delt))
+    deltas = set()
 
-    return count
+    for p in data:
+        if p == start_point:
+            continue
+        delta = simplify_delta((p[0] - x, p[1] - y))
+        deltas.add(delta)
+
+    return len(deltas)
 
 
 if __name__ == '__main__':
@@ -69,7 +34,7 @@ if __name__ == '__main__':
     # O(n)
     max_dst = None
     for x, y in data:
-        # O(n^2)
+        # O(n)
         curr_dst = calculate_visible(data, x, y)
         print(f'<{x}, {y}> = {curr_dst}')
         if max_dst is None or curr_dst > max_dst:
