@@ -49,7 +49,14 @@ if __name__ == '__main__':
 
             })
 
-    print(get_min_ore('FUEL', 1, reaction_data, {}))
+    cache = {}
+    ore_per_fuel = get_min_ore('FUEL', 1, reaction_data, cache)
+    print(ore_per_fuel)
+
+    fuel = 2370000
+    while get_min_ore('FUEL', fuel, reaction_data, {}) < 1000000000000:
+        fuel += 1
+    print(fuel - 1)
 
     # First part answer:  741927
-    # Second part answer:
+    # Second part answer: 2371699
