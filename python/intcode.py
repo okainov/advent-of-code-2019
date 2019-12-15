@@ -126,8 +126,11 @@ def single_input_intcode(data, input_value):
     calculator = intcode(data)
     try:
         while True:
-            next(calculator)
-            outputs.append(calculator.send(input_value))
+            input_prompt = next(calculator)
+            assert input_prompt == 'I WANNA INPUT'
+            next(calculator) # Rewind to the actual input
+            calculator.send(input_value) # Input value
+            outputs.append(next(calculator)) # Get next output
             while True:
                 outputs.append(next(calculator))
     except StopIteration:
