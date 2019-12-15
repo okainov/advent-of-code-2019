@@ -26,9 +26,9 @@ def arcade(input_path='day_13_input.txt', n_quarters=1):
     # inputs.txt = []
     last_score = 0
     input_tick = 0
-    ball_position = None
-    paddle_position = None
-    previous_ball_position = None
+    ball_position = (19, 19)
+    paddle_position = (21, 22)
+    previous_ball_position = (18, 18)
     try:
         while True:
             i += 1
@@ -41,8 +41,6 @@ def arcade(input_path='day_13_input.txt', n_quarters=1):
                     # Restore sequence from save file
                     qq = inputs[input_tick]
                 else:
-
-                    # First ~990 ticks are just initial preparations
                     # Print the system
                     os.system('cls')
                     print_image(state)
@@ -51,24 +49,35 @@ def arcade(input_path='day_13_input.txt', n_quarters=1):
                     print('Walls: %s' % len([x for x in state if state[x] == 1]))
                     print('Blocks: %s' % len([x for x in state if state[x] == 2]))
                     print(f'Paddle: {paddle_position}')
-                    print(f'Ball was at: {previous_ball_position}' )
-                    print(f'Ball at: {ball_position}' )
+                    print(f'Ball was at: {previous_ball_position}')
+                    print(f'Ball at: {ball_position}')
                     print('Score: %s' % last_score)
 
                     # Try to autopilot
                     ball_velocity = substract_pairs(ball_position, previous_ball_position)
                     projected_next_ball_position = sum_pairs(ball_position, ball_velocity)
-                    print(f'Projected position at: {projected_next_ball_position}' )
-                    if projected_next_ball_position[0] > paddle_position[0]:
-                        automatic_input = 1
-                    elif projected_next_ball_position[0] < paddle_position[0]:
-                        automatic_input = -1
+                    print(f'Velocity: {ball_velocity}')
+                    print(f'Projected next position at: {projected_next_ball_position}')
+                    if projected_next_ball_position[1] == 22:
+                        print(f'DECIDE THE DIRECTION!')
+
+                    automatic_input = 0
+                    if ball_velocity[1] >= 0:
+                        # Autopilot only if ball is falling down
+                        while projected_next_ball_position[1] < 22:
+                            projected_next_ball_position = sum_pairs(projected_next_ball_position, ball_velocity)
+
+                        print(f'Projected final position at: {projected_next_ball_position}')
+                        if projected_next_ball_position[0] > paddle_position[0]:
+                            automatic_input = 1
+                        elif projected_next_ball_position[0] < paddle_position[0]:
+                            automatic_input = -1
                     else:
-                        automatic_input = 0
+                        pass
 
-
+                    print(f'Suggested autopilot: {automatic_input}')
                     # ASk for user input
-                    print('....')
+                    print('Use left, right, <Space> for autopilot or any other key for nothing')
                     with keyboard.Events() as events:
                         event = events.get(1000.0)
                         if event is None:
@@ -78,10 +87,11 @@ def arcade(input_path='day_13_input.txt', n_quarters=1):
                             qq = -1
                         elif event.key == keyboard.Key.right:
                             qq = 1
+                        elif event.key == keyboard.Key.space:
+                            qq = automatic_input
                         else:
                             qq = 0
 
-                    qq = automatic_input
                     inputs.append(int(qq))
 
                 input_tick += 1
@@ -108,12 +118,21 @@ def arcade(input_path='day_13_input.txt', n_quarters=1):
             if tile_id == 2:
                 blocks += 1
 
-
     except StopIteration:
         print('GAME OVER!')
         print('Score: %s' % last_score)
-        print('Inputs: %s' % inputs)
-        pass
+
+        print('Press any but ESC to save inputs')
+        with keyboard.Events() as events:
+            event = events.get(1000.0)
+            if event is None:
+                print('You did not press a key within one second')
+            elif event.key == keyboard.Key.esc:
+                pass
+            else:
+                with open('inputs.txt', 'w') as f:
+                    f.write(json.dumps(inputs[:-3]))
+                print('Saved')
 
     return blocks
 

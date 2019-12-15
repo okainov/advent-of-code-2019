@@ -1,6 +1,7 @@
 def sum_pairs(pair_1, pair_2):
     return pair_1[0] + pair_2[0], pair_1[1] + pair_2[1]
 
+
 def substract_pairs(pair_1, pair_2):
     return pair_1[0] - pair_2[0], pair_1[1] - pair_2[1]
 
@@ -26,8 +27,9 @@ def print_image(image, reversed_y=False):
                 # Block
                 char = chr(0x2588)
             elif image[(x, y)] in [3, '3']:
-                char = chr(0x2580)
-                #char = '_'
+                char = chr(0x2588)
+                # Print paddle twice
+                print( chr(0x2588), end='')
             elif image[(x, y)] in [4, '4']:
                 char = 'o'
             print(char, end='')
