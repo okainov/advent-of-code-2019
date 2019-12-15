@@ -1,6 +1,6 @@
 import os
 
-from python.intcode import intcode, single_input_intcode
+from python.intcode import single_input_intcode
 
 if __name__ == '__main__':
     result = 0

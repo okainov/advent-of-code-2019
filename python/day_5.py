@@ -1,9 +1,8 @@
 import os
 
-from python.intcode import intcode, single_input_intcode
+from python.intcode import single_input_intcode
 
 if __name__ == '__main__':
-    result = 0
     with open(os.path.join('..', 'day_5_input.txt'), 'r') as f:
         data = list(map(int, f.read().split(',')))
 
