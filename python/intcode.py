@@ -38,7 +38,6 @@ def intcode(data, print_output=False):
 
     i = 0
     relative_base = 0
-    print('========================INIT INTCODE=================')
     while True:
         full_operation = f"{data[i]:05d}"
 
