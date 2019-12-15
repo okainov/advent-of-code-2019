@@ -11,16 +11,22 @@ def calculate_squence(data, inputs):
 
     for i in range(len(inputs)):
         amplifier = intcode(data)
-        next(amplifier)
-        amplifier.send(inputs[i])
+
+        input_prompt = next(amplifier)
+        assert input_prompt == 'I WANNA INPUT'
+        next(amplifier)  # Rewind to the input place
+        amplifier.send(inputs[i])  # Provide input
 
         amplifiers.append(amplifier)
 
     while True:
         for i in range(len(inputs)):
-            result = amplifiers[i].send(result)
             try:
+                input_prompt = next(amplifiers[i])
+                assert input_prompt == 'I WANNA INPUT'
                 next(amplifiers[i])
+                amplifiers[i].send(result)
+                result = next(amplifiers[i])
             except StopIteration:
                 if i == len(inputs) - 1:
                     return result
