@@ -3,6 +3,18 @@ from collections import defaultdict
 import sys
 
 
+class InputNeededException(Exception):
+    pass
+
+
+class HaltException(Exception):
+    pass
+
+
+class OutputException(Exception):
+    pass
+
+
 class Program:
     def __getitem__(self, item):
         try:
@@ -31,85 +43,108 @@ def get_param(data, index, mode, relative_base=0):
     pass
 
 
-def intcode(data, print_output=False):
-    # Version of Intcode program which returns back waiting for input and also yields the output
-    # Make explicit copy to do not mess with initial data
-    data = Program(data)
+class Intcode:
+    def __init__(self, source):
+        self.memory = Program(source)
 
-    i = 0
-    relative_base = 0
-    while True:
-        full_operation = f"{data[i]:05d}"
+        self.ip = 0
+        self.relative_base = 0
+        self.input = []
+
+        self.ticks = 0
+
+        self.unread_outputs = []
+
+    def execute(self):
+        qq = self.tick()
+        try:
+            while True:
+                value = qq.send(None)
+                yield value
+                if value == "I WANNA INPUT":
+                    yield value
+        except StopIteration:
+            print('Execution done')
+        except InterruptedError:
+            print('Halt')
+
+    def add_input(self, input_value):
+        if isinstance(input_value, list):
+            self.input.extend(input_value)
+        else:
+            self.input.append(input_value)
+
+    def tick(self):
+        self.ticks += 1
+        full_operation = f"{self.memory[self.ip]:05d}"
 
         operation = int(full_operation[-2:])
         params = full_operation[:-2]
 
         if operation == 99:
-            break
+            raise InterruptedError
 
         if operation == 1:
             # Add
-            result_pos = get_param(data, i + 3, params[-3], relative_base)
-            data[result_pos] = data[get_param(data, i + 1, params[-1], relative_base)] + \
-                               data[get_param(data, i + 2, params[-2], relative_base)]
-            i += 4
+            result_pos = get_param(self.memory, self.ip + 3, params[-3], self.relative_base)
+            self.memory[result_pos] = self.memory[get_param(self.memory, self.ip + 1, params[-1], self.relative_base)] + \
+                                      self.memory[get_param(self.memory, self.ip + 2, params[-2], self.relative_base)]
+            self.ip += 4
         elif operation == 2:
             # Multiply
-            result_pos = get_param(data, i + 3, params[-3], relative_base)
-            data[result_pos] = data[get_param(data, i + 1, params[-1], relative_base)] * \
-                               data[get_param(data, i + 2, params[-2], relative_base)]
-            i += 4
+            result_pos = get_param(self.memory, self.ip + 3, params[-3], self.relative_base)
+            self.memory[result_pos] = self.memory[get_param(self.memory, self.ip + 1, params[-1], self.relative_base)] * \
+                                      self.memory[get_param(self.memory, self.ip + 2, params[-2], self.relative_base)]
+            self.ip += 4
         elif operation == 3:
             # Input
-            result_pos = get_param(data, i + 1, params[-1], relative_base)
+            result_pos = get_param(self.memory, self.ip + 1, params[-1], self.relative_base)
 
-            yield "I WANNA INPUT"
-            data[result_pos] = yield
-            yield "DUMMY YIELD STUPID PYTHON"
-            if data[result_pos] is None:
-                print('========================ASKING FOR INPUT=================')
-                sys.exit(-3)
-            i += 2
+            if not self.input:
+                raise InputNeededException
+
+            input_value = self.input.pop(0)
+            # Flush outputs buffer, assuming all of it have been read already
+            self.unread_outputs = []
+
+            self.memory[result_pos] = input_value
+
+            self.ip += 2
         elif operation == 4:
-            # Print
-            result = data[get_param(data, i + 1, params[-1], relative_base)]
-            if print_output:
-                print(result)
-            yield result
-            i += 2
+            result = self.memory[get_param(self.memory, self.ip + 1, params[-1], self.relative_base)]
+            self.unread_outputs.append(result)
+            self.ip += 2
         elif operation == 5:
-            if data[get_param(data, i + 1, params[-1], relative_base)]:
-                i = data[get_param(data, i + 2, params[-2], relative_base)]
+            if self.memory[get_param(self.memory, self.ip + 1, params[-1], self.relative_base)]:
+                self.ip = self.memory[get_param(self.memory, self.ip + 2, params[-2], self.relative_base)]
             else:
-                i += 3
+                self.ip += 3
         elif operation == 6:
-            if data[get_param(data, i + 1, params[-1], relative_base)] == 0:
-                i = data[get_param(data, i + 2, params[-2], relative_base)]
+            if self.memory[get_param(self.memory, self.ip + 1, params[-1], self.relative_base)] == 0:
+                self.ip = self.memory[get_param(self.memory, self.ip + 2, params[-2], self.relative_base)]
             else:
-                i += 3
+                self.ip += 3
         elif operation == 7:
             # If less than
-            if data[get_param(data, i + 1, params[-1], relative_base)] < \
-                    data[get_param(data, i + 2, params[-2], relative_base)]:
-                data[get_param(data, i + 3, params[-3], relative_base)] = 1
+            if self.memory[get_param(self.memory, self.ip + 1, params[-1], self.relative_base)] < \
+                    self.memory[get_param(self.memory, self.ip + 2, params[-2], self.relative_base)]:
+                self.memory[get_param(self.memory, self.ip + 3, params[-3], self.relative_base)] = 1
             else:
-                data[get_param(data, i + 3, params[-3], relative_base)] = 0
+                self.memory[get_param(self.memory, self.ip + 3, params[-3], self.relative_base)] = 0
 
-            i += 4
+            self.ip += 4
         elif operation == 8:
             # if equal
-            if data[get_param(data, i + 1, params[-1], relative_base)] == \
-                    data[get_param(data, i + 2, params[-2], relative_base)]:
-                data[get_param(data, i + 3, params[-3], relative_base)] = 1
+            if self.memory[get_param(self.memory, self.ip + 1, params[-1], self.relative_base)] == \
+                    self.memory[get_param(self.memory, self.ip + 2, params[-2], self.relative_base)]:
+                self.memory[get_param(self.memory, self.ip + 3, params[-3], self.relative_base)] = 1
             else:
-                data[get_param(data, i + 3, params[-3], relative_base)] = 0
-            i += 4
+                self.memory[get_param(self.memory, self.ip + 3, params[-3], self.relative_base)] = 0
+            self.ip += 4
         elif operation == 9:
             # Increase relative base
-            relative_base += data[get_param(data, i + 1, params[-1], relative_base)]
-            i += 2
-
-    return
+            self.relative_base += self.memory[get_param(self.memory, self.ip + 1, params[-1], self.relative_base)]
+            self.ip += 2
 
 
 def single_input_intcode(data, input_value):
@@ -120,18 +155,15 @@ def single_input_intcode(data, input_value):
     :return: list of outputs
     """
 
-    outputs = []
+    calculator = Intcode(data)
+    calculator.add_input(input_value)
 
-    calculator = intcode(data)
-    try:
-        while True:
-            input_prompt = next(calculator)
-            assert input_prompt == 'I WANNA INPUT'
-            next(calculator) # Rewind to the actual input
-            calculator.send(input_value) # Input value
-            outputs.append(next(calculator)) # Get next output
-            while True:
-                outputs.append(next(calculator))
-    except StopIteration:
-        pass
-    return outputs
+    while True:
+        try:
+            calculator.tick()
+        except InputNeededException as e:
+            # Should not happen for single input program
+            raise e
+        except InterruptedError:
+            break
+    return calculator.unread_outputs
