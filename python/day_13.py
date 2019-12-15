@@ -1,8 +1,8 @@
 import copy
 import json
 import os
-import time
 from collections import defaultdict
+
 from pynput import keyboard
 
 try:
@@ -16,15 +16,18 @@ except ImportError:
 class Arcade:
     def __init__(self, data, n_quarters=2):
         self.state = defaultdict(int)
-        self.interactive = False
+        self.draw_progress = False
+        # Stop for input to give human chance to play himself =)
+        self.wait_for_input = False
 
         data[0] = n_quarters
 
         self.vm = Intcode(data)
 
         self.global_states_stack = []
-        self.i = 0
         self.input_tick = 0
+        self.hit_tick = None
+        self.hit_position = None
 
         self.ball_position = (19, 19)
         self.paddle_position = (21, 22)
@@ -54,34 +57,73 @@ class Arcade:
                     self.paddle_position = (x, y)
 
     def predict_ball_position_simple(self):
-        self.ball_velocity = substract_pairs(self.ball_position, self.previous_ball_position)
-        self.projected_next_ball_position = sum_pairs(self.ball_position, self.ball_velocity)
-        if self.interactive:
-            print(f'Velocity: {self.ball_velocity}')
-            print(f'Projected next position at: {self.projected_next_ball_position}')
-            if self.projected_next_ball_position[1] == 22:
+        """
+        Find out where to move the paddle by using only current and previous ball positions:
+        - Try to move the paddle to the same position as the ball would be (according to our prediction)
+
+        Unfortunately, this strategy doesn't work all the time, sometimes it breaks after quick ball's change direction
+        Minimal initial guidance required is:
+        [1, 0, -1, 0, 0, 1, 1, 1]
+        """
+        ball_velocity = substract_pairs(self.ball_position, self.previous_ball_position)
+        projected_next_ball_position = sum_pairs(self.ball_position, ball_velocity)
+        if self.draw_progress:
+            print(f'Velocity: {ball_velocity}')
+            print(f'Projected next position at: {projected_next_ball_position}')
+            if projected_next_ball_position[1] == 22:
                 print(f'DECIDE THE DIRECTION!')
 
         automatic_input = 0
-        if self.ball_velocity[1] > 0:
+        if ball_velocity[1] > 0:
             # Autopilot only if ball is falling down
-            while self.projected_next_ball_position[1] < 22:
-                self.projected_next_ball_position = sum_pairs(self.projected_next_ball_position,
-                                                              self.ball_velocity)
+            while projected_next_ball_position[1] < 22:
+                projected_next_ball_position = sum_pairs(projected_next_ball_position, ball_velocity)
         else:
             pass
 
-        if self.interactive:
-            print(f'Projected final position at: {self.projected_next_ball_position}')
-        if self.projected_next_ball_position[0] > self.paddle_position[0]:
+        if self.draw_progress:
+            print(f'Projected final position at: {projected_next_ball_position}')
+        if projected_next_ball_position[0] > self.paddle_position[0]:
             automatic_input = 1
-        elif self.projected_next_ball_position[0] < self.paddle_position[0]:
+        elif projected_next_ball_position[0] < self.paddle_position[0]:
+            automatic_input = -1
+        return automatic_input
+
+    def predict_ball_position_emulation(self):
+        """
+        Find out where to move the paddle by modelling the whole game to find the position of the ball
+        :return: direction where to move the paddle
+        """
+        if self.hit_position is None or self.vm.ticks >= self.hit_tick:
+            # Emulate the flow only if it's time =)
+            emulator = copy.deepcopy(self)
+
+            while True:
+                try:
+                    emulator.vm.tick()
+                except InputNeededException:
+                    emulator.handle_outputs()
+                    if emulator.ball_position[1] == 21:
+                        # Ball reached the line before the paddle, we can remember its position
+                        break
+                    emulator.vm.add_input(0)
+                except InterruptedError:
+                    # Nothing to predict, game will be finished
+                    return 0
+            self.hit_tick = emulator.vm.ticks
+            self.hit_position = emulator.ball_position
+
+        automatic_input = 0
+        if self.draw_progress:
+            print(f'Projected final position at: {self.hit_position}')
+        if self.hit_position[0] > self.paddle_position[0]:
+            automatic_input = 1
+        elif self.hit_position[0] < self.paddle_position[0]:
             automatic_input = -1
         return automatic_input
 
     def play(self):
         while True:
-            self.i += 1
 
             try:
                 self.vm.tick()
@@ -89,77 +131,76 @@ class Arcade:
             except InputNeededException:
                 self.handle_outputs()
 
-                # 1010 is the first tick asking for input
                 if len(self.save_file) > self.input_tick:
-                    # Restore sequence from save file
-                    qq = self.save_file[self.input_tick]
+                    # Restore&replay the sequence from save file
+                    input_value = self.save_file[self.input_tick]
                 else:
-                    if self.interactive:
+                    if self.draw_progress:
                         # Print the system
                         os.system('cls')
                         print_image(self.state)
                         print('')
-                        print(f'Tick {self.i}')
                         print(f'VM tick {self.vm.ticks}')
-                        print('Walls: %s' % len([x for x in self.state if self.state[x] == 1]))
                         print('Blocks: %s' % len([x for x in self.state if self.state[x] == 2]))
                         print(f'Paddle: {self.paddle_position}')
                         print(f'Ball was at: {self.previous_ball_position}')
                         print(f'Ball at: {self.ball_position}')
                         print('Score: %s' % self.score)
 
-                    automatic_input = self.predict_ball_position_simple()
+                    # automatic_input = self.predict_ball_position_simple()
+                    automatic_input = self.predict_ball_position_emulation()
 
-                    if self.interactive:
+                    if self.draw_progress:
                         print(f'Suggested autopilot: {automatic_input}')
+
+                    if self.wait_for_input:
                         # ASk for user input
-                        print(
-                            'Use left, right, <Space> for autopilot or any other key for nothing')
+                        print('Use left, right, <Space> for autopilot or any other key for nothing')
                         with keyboard.Events() as events:
                             event = events.get(1000.0)
                             if event is None:
                                 print('You did not press a key within one second')
-                                qq = 0
+                                input_value = 0
                             elif event.key == keyboard.Key.left:
-                                qq = -1
+                                input_value = -1
                             elif event.key == keyboard.Key.right:
-                                qq = 1
+                                input_value = 1
                             elif event.key == keyboard.Key.space:
-                                qq = automatic_input
+                                input_value = automatic_input
                             else:
-                                qq = 0
+                                input_value = 0
                     else:
-                        qq = automatic_input
-                    self.save_file.append(int(qq))
+                        input_value = automatic_input
+                    self.save_file.append(int(input_value))
 
                 self.input_tick += 1
-                self.vm.add_input(int(qq))
+                self.vm.add_input(int(input_value))
                 continue
 
             except InterruptedError:
                 self.handle_outputs()
                 print('GAME OVER!')
+                print('Blocks: %s' % len([x for x in self.state if self.state[x] == 2]))
                 print('Score: %s' % self.score)
 
-                print('Press any but ESC to save inputs')
-                with keyboard.Events() as events:
-                    event = events.get(1000.0)
-                    if event is None:
-                        print('You did not press a key within one second')
-                    elif event.key == keyboard.Key.esc:
-                        pass
-                    else:
-                        with open('inputs.txt', 'w') as f:
-                            f.write(json.dumps(self.save_file[:-3]))
-                        print('Saved')
+                potential_save = self.save_file[:-3]
+                if potential_save:
+                    print('Press any but ESC to save inputs')
+                    with keyboard.Events() as events:
+                        event = events.get(1000.0)
+                        if event is None:
+                            print('You did not press a key within one second')
+                        elif event.key == keyboard.Key.esc:
+                            pass
+                        else:
+                            with open('inputs.txt', 'w') as f:
+                                f.write(json.dumps(self.save_file[:-3]))
+                            print('Saved')
 
                 break
 
 
 if __name__ == '__main__':
-    # cells_1 = arcade()
-    # print('Part 1: %s' % cells_1)
-
     with open(os.path.join('..', 'day_13_input.txt'), 'r') as f:
         data = list(map(int, f.read().split(',')))
     automat = Arcade(data, n_quarters=2)
