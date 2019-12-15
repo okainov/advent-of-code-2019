@@ -34,6 +34,9 @@ def arcade(input_path='day_15_input.txt', n_quarters=1):
         3: (-1, 0)
     }
 
+    max_distance = 0
+    backwards = False
+
     try:
         while True:
             i += 1
@@ -71,6 +74,8 @@ def arcade(input_path='day_15_input.txt', n_quarters=1):
                     state[current_position] = old_distance + 1
                 else:
                     state[current_position] = min(old_distance + 1, state[current_position])
+                if state[current_position] > max_distance:
+                    max_distance = state[current_position]
 
             elif result == 2:
                 old_distance = state[current_position]
@@ -79,9 +84,25 @@ def arcade(input_path='day_15_input.txt', n_quarters=1):
                     state[current_position] = old_distance + 1
                 else:
                     state[current_position] = min(old_distance + 1, state[current_position])
-                # Yahoo, found exit... need to count?
-                print(state[current_position])
-                break
+
+                if not backwards:
+                    # Yahoo, found exit... need to count?
+                    print('Part 1: %s' % state[current_position])
+
+                    # cleanup everything and try again =)
+                    state = dict()
+                    state[current_position] = 0
+                    next_direction_from_cell_map = defaultdict(int)
+                    backwards = True
+                    max_distance = 0
+                    continue
+                else:
+                    # We came back to the oxygen station during the second round.
+                    # Let's make assumption that we haven't missed anything as the maze is "good", so we should have
+                    # recorded really max max_distance
+                    # Just randomly print current max_distance, should be good enough for part 2
+                    print(f'Part 2: {max_distance}')
+                    break
 
             elif result == 0:
                 state[sum_pairs(current_position, increment_table[direction])] = -1
@@ -98,5 +119,5 @@ if __name__ == '__main__':
 
     cells_1 = arcade(n_quarters=2)
 
-    # First part answer:  258
-    # Second part answer:
+    # First part answer:  296
+    # Second part answer: 302
