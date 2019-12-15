@@ -62,7 +62,7 @@ def arcade(input_path='day_13_input.txt', n_quarters=1):
                         print(f'DECIDE THE DIRECTION!')
 
                     automatic_input = 0
-                    if ball_velocity[1] >= 0:
+                    if ball_velocity[1] > 0:
                         # Autopilot only if ball is falling down
                         while projected_next_ball_position[1] < 22:
                             projected_next_ball_position = sum_pairs(projected_next_ball_position, ball_velocity)
