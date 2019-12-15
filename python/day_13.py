@@ -89,6 +89,20 @@ class Arcade:
             automatic_input = -1
         return automatic_input
 
+    def predict_ball_position_stupid_simple(self):
+        """
+        Just use the sign, nothing more, people say it works...
+        """
+        ball_x = self.ball_position[0]
+        paddle_x = self.paddle_position[0]
+
+        automatic_input = 0
+        if ball_x > paddle_x:
+            automatic_input = 1
+        elif ball_x < paddle_x:
+            automatic_input = -1
+        return automatic_input
+
     def predict_ball_position_emulation(self):
         """
         Find out where to move the paddle by modelling the whole game to find the position of the ball
@@ -148,7 +162,8 @@ class Arcade:
                         print('Score: %s' % self.score)
 
                     # automatic_input = self.predict_ball_position_simple()
-                    automatic_input = self.predict_ball_position_emulation()
+                    # automatic_input = self.predict_ball_position_emulation()
+                    automatic_input = self.predict_ball_position_stupid_simple()
 
                     if self.draw_progress:
                         print(f'Suggested autopilot: {automatic_input}')
