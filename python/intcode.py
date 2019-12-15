@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+import sys
+
 
 class Program:
     def __getitem__(self, item):
@@ -36,6 +38,7 @@ def intcode(data, print_output=False):
 
     i = 0
     relative_base = 0
+    print('========================INIT INTCODE=================')
     while True:
         full_operation = f"{data[i]:05d}"
 
@@ -60,7 +63,13 @@ def intcode(data, print_output=False):
         elif operation == 3:
             # Input
             result_pos = get_param(data, i + 1, params[-1], relative_base)
+
+            yield "I WANNA INPUT"
             data[result_pos] = yield
+            yield "DUMMY YIELD STUPID PYTHON"
+            if data[result_pos] is None:
+                print('========================ASKING FOR INPUT=================')
+                sys.exit(-3)
             i += 2
         elif operation == 4:
             # Print
