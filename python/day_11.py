@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 
-from python.utils import sum_pairs
+from python.utils import sum_pairs, print_image
 
 
 class Program:
@@ -104,13 +104,13 @@ def solve_day_9(data):
     return
 
 
-def color_robot(input_path='day_11_input.txt'):
+def color_robot(input_path='day_11_input.txt', starting_color=0):
     with open(os.path.join('..', input_path), 'r') as f:
         data = list(map(int, f.read().split(',')))
 
     current_position = (0, 0)
     cells = defaultdict(int)
-    cells[current_position] = 0
+    cells[current_position] = starting_color
     current_facing = 0
 
     facing = ['U', 'R', 'D', 'L']
@@ -143,10 +143,13 @@ def color_robot(input_path='day_11_input.txt'):
     except StopIteration:
         pass
 
-    print(len(cells))
+    return cells
 
 
 if __name__ == '__main__':
-    color_robot()
+    cells_1 = color_robot()
+    print('Part 1: %s' % len(cells_1))
+    cells_2 = color_robot(starting_color=1)
+    print_image(cells_2, reversed_y=True)
     # First part answer:  1932
-    # Second part answer:
+    # Second part answer: EGHKGJER

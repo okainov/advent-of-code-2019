@@ -1,5 +1,7 @@
 import os
 
+from python.utils import print_image
+
 if __name__ == '__main__':
     result = 0
     with open(os.path.join('..', 'day_8_input.txt'), 'r') as f:
@@ -24,14 +26,7 @@ if __name__ == '__main__':
 
         final_image[(x, y)] = c
 
-    for y in range(HEIGHT):
-        # Print newline
-        print('')
-        for x in range(WIDTH):
-            char = chr(0x2588 + 9)
-            if final_image[(x, y)] == '1':
-                char = chr(0x2588)
-            print(char, end='')
+    print_image(final_image)
 
     # First part answer:  2048
     # Second part answer: HFYAK
