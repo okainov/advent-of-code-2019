@@ -16,8 +16,8 @@ except ImportError:
 
 
 class Arcade:
-    def __init__(self, data, n_quarters=2):
-        self.state = defaultdict(int)
+    def __init__(self, data, part=1):
+        self.part = part
 
         self.vm = Intcode(data)
 
@@ -41,40 +41,75 @@ class Arcade:
         for command in commands_list:
             self.provide_text_input(command)
 
-    def play(self):
-        while True:
+    def get_program(self, part):
+        if part == 1:
+            # Up to 4 next tiles visible, jumping over next three
+            return [
+                # In we're just before the hole - jump, no choice
+                # @..
+                # #.#
+                'NOT A J',
+                # Try to jump over two if there is ground after, because there can be hole outside of line of sight
+                # @....|.
+                # ##..#|.
+                'NOT B T',
+                'AND D T',
+                'OR T J',
+                # The other way around, jump over one if there is ground and possible holes outside of sight
+                # @....|.
+                # ###.#|..
+                'NOT C T',
+                'AND D T',
+                'OR T J',
+                'WALK'
+            ]
+        else:
+            # Up to 9 next tiles visible
+            return [
+                'NOT A J',
+                'NOT B T',
+                'AND D T',
+                'OR T J',
+                'NOT C T',
+                'AND D T',
+                'AND H T',
+                # The only addition to the Part one, to avoid the case when we can wait a bit
+                # @............
+                # ####.#.##.###
+                #      ^ - landing here would be really bad
+                #          ^ so we can check this tile it's good
+                'OR T J',
+                'RUN'
+            ]
 
+    def play(self):
+        self.provide_series_of_inputs(self.get_program(self.part))
+        while True:
             try:
                 self.vm.tick()
 
             except InputNeededException:
                 self.handle_outputs()
-                self.provide_series_of_inputs([
-                    'NOT A J',
-                    'NOT B T',
-                    'AND D T',
-                    'OR T J',
-                    'NOT C T',
-                    'AND D T',
-                    'OR T J',
-                    'WALK'
-                ])
-
+                # Should not happen really since we've already provided all the input
                 continue
 
             except InterruptedError:
                 self.handle_outputs()
-
                 print('\nGAME OVER!')
-
                 break
 
 
 if __name__ == '__main__':
     with open(os.path.join('..', 'day_21_input.txt'), 'r') as f:
         data = list(map(int, f.read().split(',')))
-    automat = Arcade(data, n_quarters=2)
+
+    print('=============Part 1============')
+    automat = Arcade(data, part=1)
+    automat.play()
+
+    print('=============Part 2============')
+    automat = Arcade(data, part=2)
     automat.play()
 
     # First part answer: 19358870
-    # Second part answer:
+    # Second part answer: 1143356492
